@@ -13,4 +13,6 @@ RUN cd /tmp && \
     tar -xzvf docker-18.06.0-ce.tgz -C / && \
     rm -rf /tmp
 
+COPY send_signal.sh /
+
 ENTRYPOINT ["/bin/consul-template"]

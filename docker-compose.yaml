@@ -3,10 +3,10 @@ services:
   consul-template:
     build:
       context: ./consul-template
-    image: local/consul-template
+    image: 127.0.0.1:5000/consul-template
     hostname: consul
     command: |
-      -consul-addr consul:8500 -template "/templates/nginx.tpl:/templates/nginx_conf/server.conf:/docker/docker kill --signal=SIGHUP demo_lb_1"
+      -consul-addr consul:8500 -template "/templates/nginx.tpl:/templates/nginx_conf/server.conf:sh /send_signal.sh demo_lb"
     environment:
       DOCKER_HOST: unix://tmp/docker.sock
     volumes:
@@ -20,7 +20,8 @@ services:
   consul:
     image: consul:latest
     hostname: consul
-    command: "agent -server -bootstrap-expect 1 -ui -client 0.0.0.0"
+    command: |
+      agent -server -bootstrap-expect 1 -ui -client 0.0.0.0 -bind '{{ GetPrivateIP }}'
     ports:
       - "8400:8400"
       - "8500:8500"
@@ -44,7 +45,7 @@ services:
   lb:
     build:
       context: ./nginx
-    image: local/nginx
+    image: 127.0.0.1:5000/nginx
     hostname: nginx
     ports:
       - "8080:80"
@@ -61,7 +62,7 @@ services:
   wordpress:
     build:
       context: ./wordpress
-    image: local/wordpress
+    image: 127.0.0.1:5000/wordpress
     hostname: wordpress
     restart: always
     environment:
@@ -92,6 +93,15 @@ services:
       - backend
 
 networks:
-  frontend: {}
-  backend: {}
-  control: {}
+  frontend:
+    ipam:
+      config:
+        - subnet: 10.2.0.0/16
+  backend:
+    ipam:
+      config:
+        - subnet: 10.3.0.0/16
+  control:
+    ipam:
+      config:
+        - subnet: 10.4.0.0/16
