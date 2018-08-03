@@ -20,7 +20,26 @@ jobs:
           command: |
             docker stack deploy --compose-file docker-compose.yaml demo
             docker service update demo_lb --publish-add 8443:443
-            sleep 30
+            sleep 45
+            curl -o pre_scale_website.html -Lk https://localhost:8443/wp-admin/install.php
+      - store_artifacts:
+          path: pre_scale_website.html
+          destination: pre_scale_website.html
+      - store_artifacts:
+          path: templates/nginx_conf/server.conf
+          destination: pre_scale_nginx.conf
+      - run:
+          name: Deploy to swarm
+          command: |
+            docker service scale demo_wordpress=10
+            sleep 60
+            curl -o post_scale_website.html -Lk https://localhost:8443/wp-admin/install.php
+      - store_artifacts:
+          path: post_scale_website.html
+          destination: post_scale_website.html
+      - store_artifacts:
+          path: templates/nginx_conf/server.conf
+          destination: post_scale_nginx.conf        
       - run:
           name: Store logs
           command: |
@@ -33,6 +52,7 @@ jobs:
             docker service logs demo_registrator 2>&1 | tee ./logs/demo_registrator.log
       - store_artifacts:
           path: ./logs/
+
 workflows:
   version: 2
   build:
