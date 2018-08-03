@@ -1,0 +1,97 @@
+version: '3'
+services:
+  consul-template:
+    build:
+      context: ./consul-template
+    image: local/consul-template
+    hostname: consul
+    command: |
+      -consul-addr consul:8500 -template "/templates/nginx.tpl:/templates/nginx_conf/server.conf:/docker/docker kill --signal=SIGHUP demo_lb_1"
+    environment:
+      DOCKER_HOST: unix://tmp/docker.sock
+    volumes:
+      - "/var/run/docker.sock:/tmp/docker.sock"
+      - "./templates:/templates"
+    depends_on:
+      - consul
+    networks:
+      - control
+
+  consul:
+    image: consul:latest
+    hostname: consul
+    command: "agent -server -bootstrap-expect 1 -ui -client 0.0.0.0"
+    ports:
+      - "8400:8400"
+      - "8500:8500"
+      - "8600:8600"
+      - "8600:8600/udp"
+    networks:
+      - control
+
+  registrator:
+    image: gliderlabs/registrator:latest
+    command: -internal consul://consul:8500
+    hostname: registrator
+    volumes:
+      - "/var/run/docker.sock:/tmp/docker.sock"
+    depends_on:
+      - consul
+    networks:
+      - control
+
+# main service plane
+  lb:
+    build:
+      context: ./nginx
+    image: local/nginx
+    hostname: nginx
+    ports:
+      - "8080:80"
+      - "8443:443"
+    volumes:
+      - "./templates/nginx_conf:/etc/nginx/servers/"
+      - "./ssl:/etc/nginx/ssl/"
+    depends_on:
+      - registrator
+      - wordpress
+    networks:
+      - frontend
+
+  wordpress:
+    build:
+      context: ./wordpress
+    image: local/wordpress
+    hostname: wordpress
+    restart: always
+    environment:
+      DB_HOST: mysql
+      DB_USER: root
+      DB_PASSWORD: wordpress
+      DB_NAME: wordpress
+    depends_on: 
+      - registrator
+      - consul
+      - mysql
+    networks:
+      - frontend
+      - backend
+
+  mysql:
+    image: mysql:5.7
+    restart: always
+    hostname: mysql
+    environment:
+      MYSQL_USER: wordpress
+      MYSQL_ROOT_PASSWORD: wordpress
+      MYSQL_DATABASE: wordpress
+    depends_on: 
+      - registrator
+      - consul
+    networks:
+      - backend
+
+networks:
+  frontend: {}
+  backend: {}
+  control: {}
