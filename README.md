@@ -47,6 +47,36 @@ Docker compose handles all of the automation for us:
 
 7. The script uses the same `docker.sock` socket file to send SIGHUP signal to nginx, which tells it to reload it's config and all free worker threads one by one.
 
+## Build/deployment instructions
+
+### Local development
+
+1. Run `docker-compose build && docker-compose up` for local testing.
+
+### Deployment in swarm
+
+Prerequisites:
+* `docker swarm` installed on the machine, initialized and working
+* `docker registry` deployed in the swarm and listeining on `5000` port
+
+1. To deploy containers in the `docker swarm` cluster first you have to build the images with `docker-compose build`
+
+2. theb you have to push them to the `docker registry` with `docker-compose push`
+
+3. last step is to inform `docker swarm` that it should deploy new stack with `docker stack deploy --compose-file docker-compose.yaml demo`
+
+4. Additional step to expose the app to the open world is to enable communication on port 443 with the loadbalancer. This can be done with `docker service update demo_lb --publish-add 8443:443` command
+
+### Scaling services in swarm
+
+1. To scale `wordpress` running with `docker-compose scale wordpress=XXX`, where XXX is required amount of containers
+
+2. To scale `wordpress` app in swarm one can use `docker service scale demo_wordpress=XXX`, where XXX is required amount of containers
+
+It's possible to scale nginx loadbalancers, but it's currently not tested and `consul-template` signal sending script doesn't support it yet.
+
+It's not possible to scale `mysql` database in current shape (container without replication).
+
 ## What else can be done to make the solution better?
 
 ### Configuration
@@ -76,6 +106,8 @@ Docker compose handles all of the automation for us:
 4. Once initial setup is done, `wordpress` shouts about `Error establishing a database connection`. I suspect `mysql` database bootstrap script. One could look at it and check what exactly is happening.
 
 5. Build pipeline tags internal images with address of temporary `docker registry` used for `docker stack` deployment in `docker swarm` running on `CircleCI` worker. The containers shouldn't be tagged with `127.0.0.2:5000` address. Solution would be to stand-up proper `docker registry` somewhere for more than period of building the code and make docker-compose use images from it.
+
+6. Consul should run in cluster
 
 ### Security
 

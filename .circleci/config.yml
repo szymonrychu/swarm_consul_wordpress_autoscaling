@@ -29,7 +29,7 @@ jobs:
           path: templates/nginx_conf/server.conf
           destination: pre_scale_nginx.conf
       - run:
-          name: Deploy to swarm
+          name: Scale app up
           command: |
             docker service scale demo_wordpress=10
             sleep 60
