@@ -1,5 +1,7 @@
 # Swarm consul wordpress autoscaling
 
+[![CircleCI](https://circleci.com/gh/szymonrychu/swarm_consul_wordpress_autoscaling.svg?style=svg)](https://circleci.com/gh/szymonrychu/swarm_consul_wordpress_autoscaling)
+
 ## Overview
 
 The repository contains a solution for problem of scaling application docker containers behind nginx loadbalancer.
